@@ -90,7 +90,7 @@ import PressureSensor from "./SAMLabsDevices/PressureSensorController.ts";
 import ProximitySensor from "./SAMLabsDevices/ProximitySensor";
 import LED from "./SAMLabsDevices/LED";
 import  Cookies  from 'universal-cookie';
-import {validate} from '@samlabs/tokenutility/lib';
+// import {validate} from '@samlabs/tokenutility/lib';
 ///// SAMLABS End imports
 
 
@@ -5087,16 +5087,16 @@ export class ProjectView
         ///////////////////////////////////////////////////////////
         ////////////          SAMLABS render          /////////////
         ///////////////////////////////////////////////////////////
-        if(!window.location.href.includes('localhost')){
-            const accessToken = cookies.get('ACCESS_TOKEN');
-            if ( !accessToken) {
-                return NoTokenView();
-            }
-            const validationResults = validate(accessToken);
-            if (!validationResults.isValid) {
-                return NoTokenView();
-            }
-        }
+        // if(!window.location.href.includes('localhost')){
+        //     const accessToken = cookies.get('ACCESS_TOKEN');
+        //     if ( !accessToken) {
+        //         return NoTokenView();
+        //     }
+        //     const validationResults = validate(accessToken);
+        //     if (!validationResults.isValid) {
+        //         return NoTokenView();
+        //     }
+        // }
         ///////////////////////////////////////////////////////////
         ////////////          End SAMLABS render      /////////////
         ///////////////////////////////////////////////////////////
