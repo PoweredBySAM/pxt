@@ -770,7 +770,7 @@ export class ProjectsCarousel extends data.Component<ProjectsCarouselProps, Proj
                             const obj = cookies.get('ACCESS_TOKEN');
                             const userId = obj.samScriptEncryptedUserId;
                             if (userId) {
-                                rudderanalytics.identify(userId, {}); 
+                                rudderanalytics.identify(userId); 
                                 rudderanalytics.track("Create Project", {
                                     Type: 'SAM Script',
                                     Module: 'Projects',
