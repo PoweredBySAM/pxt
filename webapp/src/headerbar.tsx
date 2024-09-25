@@ -278,7 +278,7 @@ export class HeaderBar extends data.Component<ISettingsProps, {isFlashInProgress
                 padding: 4,
                 width: 60,
                 borderRadius: 4,
-                backgroundColor: isFlashing ? '#fff' : '#26d0c4'
+                backgroundColor: isFlashing ? '#fff' : '#00AEC7'
             }}>
                 {showConsole? (
                     <svg style={{padding: 4, margin: 'auto', fill: '#fff', width: 31, height: 32}} viewBox="0 0 30 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -298,19 +298,19 @@ export class HeaderBar extends data.Component<ISettingsProps, {isFlashInProgress
                     </svg>)
                     :
                     ( <svg style={{padding: 4, margin: 'auto', fill: '#fff', width: 31, height: 32}} viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg">
-                        <path style={{stroke: isFlashing ? '#26d0c4' :  'unset'}}
+                        <path style={{stroke: isFlashing ? '#00AEC7' :  'unset'}}
                               d="M4.11914 6.09015C3.724 6.47601 3.71643 7.10913 4.10229 7.50427L7.47876 10.9616L4.04126 14.3909C3.65027 14.7809 3.64941 15.4141 4.03955 15.8051L4.18726 15.9531C4.57727 16.3441 5.21045 16.3448 5.60144 15.9548L9.79395 11.7723C9.85828 11.7081 9.91211 11.6373 9.95532 11.5621C10.2584 11.1736 10.2354 10.6114 9.88159 10.2491L5.68835 5.95538C5.30249 5.56024 4.66943 5.55273 4.27429 5.9386L4.11914 6.09015Z"/>
-                        <path style={{stroke: isFlashing ? '#26d0c4' : 'unset'}}
+                        <path style={{stroke: isFlashing ? '#00AEC7' : 'unset'}}
                               d="M18.3438 15.1958C18.3438 14.6435 17.896 14.1958 17.3438 14.1958H10.7213C10.1691 14.1958 9.72131 14.6435 9.72131 15.1958V15.4049C9.72131 15.9572 10.1691 16.4049 10.7213 16.4049H17.3438C17.896 16.4049 18.3438 15.9572 18.3438 15.4049V15.1958Z"/>
                         <path fillRule="evenodd" clipRule="evenodd"
-                              style={{stroke: isFlashing ? '#26d0c4' : 'unset'}}
+                              style={{stroke: isFlashing ? '#00AEC7' : 'unset'}}
                               d="M0 2C0 0.895447 0.895386 0 2 0H20C21.1046 0 22 0.895447 22 2V20C22 21.1046 21.1046 22 20 22H2C0.895386 22 0 21.1046 0 20V2ZM2 2H20V20H2V2Z"/>
                     </svg>)
                 }
                 <span style={{
                     padding: 2,
                     fontSize: 13,
-                    color: isFlashing ? '#26d0c4' :  '#fff'
+                    color: isFlashing ? '#00AEC7' :  '#fff'
                 }}>{showConsole ? 'Devices' : 'Console'}</span>
             </div>
         );
@@ -344,7 +344,7 @@ export class HeaderBar extends data.Component<ISettingsProps, {isFlashInProgress
                 {home && <sui.Item className={`icon`} role="menuitem" title={lf("Back to SAMStudio")}
                                    icon="no-select chevron left large" ariaLabel={lf("Back to SAMStudio")}
                                    onClick={() => {
-                                       window.location.href = 'https://studio.samlabs.com/'
+                                       window.location.href = 'https://wozstudio.space/'
                                    }}/>}
                 {!home && <sui.Item  className={`icon`} role="menuitem" title={lf("Console")} ariaLabel={lf("Console")}
                                     onClick={() => {
@@ -370,7 +370,7 @@ export class HeaderBar extends data.Component<ISettingsProps, {isFlashInProgress
                             flexDirection: "column",
                             width: 100,
                             borderRadius: 4,
-                            backgroundColor:'#26d0c4'
+                            backgroundColor:'#00AEC7'
                         }}>
                             <span style={{
                                 padding: 2,
