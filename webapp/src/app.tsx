@@ -5185,7 +5185,7 @@ function NoTokenView (){
     return <div id="root" className="ui middle aligned center aligned grid" style={{ height: '100%', alignItems: 'center' }}>
                 <div className="ui raised segment inverted purple">
                     <h2>{lf("Oops")}</h2>
-                    <div className="ui header">{lf("Sorry, We didnt find a SAMStudio token or your Token is expired")}</div>
+                    <div className="ui header">{lf("Sorry, We didnt find a WozStudio token or your Token is expired")}</div>
                 </div>
            </div>
 }
