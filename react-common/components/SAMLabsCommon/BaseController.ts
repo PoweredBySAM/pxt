@@ -8,9 +8,15 @@ const batteryServiceUUID = '0000180f-0000-1000-8000-00805f9b34fb'
 const readCharacteristicUUID = '4c592e60-980c-11e4-959a-0002a5d5c51b'
 const writeCharacteristicUUID = '84fc1520-980c-11e4-8bed-0002a5d5c51b'
 const colorCharacteristicUUID = '5baab0a0-980c-11e4-b5e9-0002a5d5c51b'
+const hexServiceUUID = '587ecb20-ddd3-11e4-9473-0002a5d5c51b'
 
 class BaseController extends EventEmitter {
+    on(event: string, listener: (...args: any[]) => void) {
+        super.on(event, listener);
+    }
     _getDefaultDeviceColor;
+    _isConnected;
+    _deviceHexId;
 
     constructor(defaultDeviceColor, namePrefix) {
         super()
@@ -25,6 +31,8 @@ class BaseController extends EventEmitter {
         this._connecting = false
         this._color
         this._writeCharacteristicValue
+        this._deviceHexId = ''
+        this.cordovaHex = ''
 
         var originalEmit = this.emit
         var self = this
@@ -51,6 +59,24 @@ class BaseController extends EventEmitter {
         this._writeColor = true
         this._write()
     })
+
+    hexStringToUint8Array = (hexString) => {
+        if(hexString.length % 2 !== 0) {
+            throw new Error('Invalid hexString')
+        }
+        const arrayBuffer = new Uint8Array(hexString.length / 2)
+        for(let i = 0; i < hexString.length; i += 2) {
+            const byteValue = parseInt(hexString.substr(i, 2), 16)
+            if(isNaN(byteValue)) {
+                this.emit('bluetoothCancelled')
+                this.emit('hexValueError', hexString.substr(i, 2))
+                throw new Error(`Invalid hex value detected: "${hexString.substr(i, 2)}". Please ensure you only use valid hex characters (0-9, A-F).`)
+            }
+            arrayBuffer[i / 2] = byteValue
+        }
+
+        return arrayBuffer
+    }
 
     setConnectedToSimDevice = (state) => {
         this._connectedToSimDevice= !!state
@@ -103,68 +129,115 @@ class BaseController extends EventEmitter {
         return { controller, signal };
     }
 
-    connect = (callback) => {
+    connect = (callback,hexValue) => {
         if(this._isConnected || this._connecting) return callback('already connected')
 
-        var batteryLevel
         const {signal}=this.getAbortController()||null;
+        let batteryLevel
+        let filters=[]
 
-        navigator.bluetooth.requestDevice(
-            {
-                filters: [
-                    {
-                        namePrefix: this._namePrefix,
-                    },
-                ],
-                optionalServices: [standardServiceUUID, 0x180f],
-                signal:signal
+        if(hexValue !== undefined) {
+            const manufacturerData = [
+                {
+                    companyIdentifier: 0xcc01,
+                    dataPrefix: this.hexStringToUint8Array(
+                        `ffff${hexValue}${'f'.repeat(4 - hexValue.length)}`
+                    ),
+                    mask: this.hexStringToUint8Array(
+                        `0000${'f'.repeat(hexValue.length)}${'0'.repeat(
+                            4 - hexValue.length
+                        )}`
+                    ),
+                },
+            ]
+            filters.push({
+                manufacturerData,
             })
-            .then((device) => this._device = device)
-            .then(() => { if(this._device.name !== this._namePrefix) throw new Error('Incorrect Device') })
-            .then(() => {
-                if(this._device.gatt.connected) {
-                    // This device is already connected,
-                    // set this._device to null so we don't accidentally disconnect it.
-                    this._device = null
-                    throw new Error('Device already connected')
-                }
+        }
+        else {
+            filters.push({
+                namePrefix: this._namePrefix,
             })
-            .then(() => this._connecting = true)
-            .then(() => this.emit('connecting'))
-            .then(() => this._device.gatt.connect())
-            .then(() => this._device.gatt.getPrimaryServices())
+        }
+
+        navigator.bluetooth.requestDevice({
+            filters: filters,
+            optionalServices: [standardServiceUUID, 0x180f],
+        })
+        .then((device) => {
+            console.log('Device selected:', device.name);
+            this._device = device;
+            this.cordovaHex = this._device.deviceHex;
+            return this._connectDevice(device, callback, batteryLevel);
+        })
+        .catch((err) => {
+            console.log('Bluetooth error:', err);
+            if (err.name === 'NotFoundError') {
+                this.emit('bluetoothCancelled');
+                callback(err);
+                return;
+            }
+            this.disconnect();
+            callback(err);
+        });
+    }
+
+    _connectDevice = (device, callback, batteryLevel) => {
+        if(device.name !== this._namePrefix) throw new Error('Incorrect Device');
+        if(device.gatt.connected) {
+            this._device = null;
+            throw new Error('Device already connected');
+        }
+
+        this._connecting = true;
+        this.emit('connecting');
+
+        return device.gatt.connect()
+            .then(() => device.gatt.getPrimaryServices())
             .then((services) => {
-                var batteryService = services.find((service) => service.uuid === batteryServiceUUID || service.uuid === '180f')
-                var standardService = services.find((service) => service.uuid === standardServiceUUID)
+                var batteryService = services.find((service) => service.uuid === batteryServiceUUID || service.uuid === '180f');
+                var standardService = services.find((service) => service.uuid === standardServiceUUID);
+
+                standardService.getCharacteristics().then((characteristics) => {
+                    const hexCharacteristic = characteristics.find((characteristic) => characteristic.uuid === hexServiceUUID);
+                    if(hexCharacteristic.properties.read) {
+                        hexCharacteristic.readValue().then((value) => {
+                            const bytes = new Uint8Array(value.buffer);
+                            const fullHex = Array.from(bytes)
+                                .map((b) => b.toString(16).padStart(2, '0'))
+                                .join('');
+                            this._deviceHexId = fullHex.slice(-4);
+                        });
+                    }
+                });
 
                 return batteryService.getCharacteristics().then((batteryCharacteristics) => {
-                    this._batteryCharacteristic = batteryCharacteristics[0]
+                    this._batteryCharacteristic = batteryCharacteristics[0];
                     this._batteryCharacteristic.oncharacteristicvaluechanged = (event) => {
-                        this.emit('batteryLevelChange', new Uint8Array(event.target.value.buffer)[0])
-                    }
+                        this.emit('batteryLevelChange', new Uint8Array(event.target.value.buffer)[0]);
+                    };
 
                     return this._batteryCharacteristic.readValue()
                         .then((event) => {
-                            batteryLevel = new Uint8Array(event.buffer)[0]
+                            batteryLevel = new Uint8Array(event.buffer)[0];
                         })
                         .then(() => this._batteryCharacteristic.stopNotifications())
                         .then(() => new Promise((resolve) => setTimeout(resolve, 1000)))
                         .then(() => this._batteryCharacteristic.startNotifications())
-                        .then(() => standardService.getCharacteristics())
-                })
+                        .then(() => standardService.getCharacteristics());
+                });
             })
             .then((characteristics) => {
-                var promise
+                var promise;
 
                 characteristics.forEach((characteristic) => {
                     if(characteristic.uuid === readCharacteristicUUID) {
-
-                        this._readCharacteristic = characteristic
+                        this._readCharacteristic = characteristic;
 
                         promise = characteristic.readValue()
                             .then((event) => {
-                                if(!this._onReadCharacteristicValueChanged) return
-                                this._onReadCharacteristicValueChanged(new Uint8Array(event.buffer))
+                                if(!this._onReadCharacteristicValueChanged) return;
+                                this._onReadCharacteristicValueChanged(new Uint8Array(event.buffer));
                             })
                             .catch((err) => {
                                 // Old SAM Labs pieces don't support the readValue command.
@@ -176,56 +249,48 @@ class BaseController extends EventEmitter {
                             .then(() => characteristic.startNotifications())
                             .then(() => {
                                 characteristic.oncharacteristicvaluechanged = (event) => {
-                                    if(!this._onReadCharacteristicValueChanged) return
-                                    setTimeout(() => this._onReadCharacteristicValueChanged(new Uint8Array(event.target.value.buffer)))
-                                }
+                                    if(!this._onReadCharacteristicValueChanged) return;
+                                    setTimeout(() => this._onReadCharacteristicValueChanged(new Uint8Array(event.target.value.buffer)));
+                                };
                             })
                             .catch((err) => {
-                                console.warn(err)
-                                this.disconnect()
-                            })
+                                console.warn(err);
+                                this.disconnect();
+                            });
                     }
 
                     if(characteristic.uuid === writeCharacteristicUUID) {
-                        this._writeCharacteristic = characteristic
+                        this._writeCharacteristic = characteristic;
                     }
 
                     if(characteristic.uuid === colorCharacteristicUUID) {
-                        this._colorCharacteristic = characteristic
+                        this._colorCharacteristic = characteristic;
                     }
-                })
+                });
 
-                return promise
+                return promise;
             })
             .then(() => {
-                this._isConnected = true
-                this._connecting = false
-                // TODO this might be a potential memory leak? Since we aren't removing it?
+                this._isConnected = true;
+                this._connecting = false;
                 this._device.addEventListener('gattserverdisconnected', () => {
-                    this.disconnect()
-                })
-                this.emit('connected')
-                this.emit('batteryLevelChange', batteryLevel)
-                this.setColor(this._getDefaultDeviceColor())
-                this.reset && this.reset()
-                callback()
+                    this.disconnect();
+                });
+                this.emit('connected');
+                this.emit('batteryLevelChange', batteryLevel);
+                this.setColor(this._getDefaultDeviceColor());
+                this.reset && this.reset();
+                callback();
             })
             .catch((err) => {
-                // this.emit("bluetoothError");
-                console.log(err)
-                if (err.name === 'AbortError') {
-                    console.log('User aborted the Bluetooth pairing process');
-                    callback(err);
-                    return;
-                }
+                console.log(err);
                 if(err.code === 8) {
-                    callback()
+                    callback();
+                } else {
+                    this.disconnect();
+                    callback(err);
                 }
-                else {
-                    this.disconnect()
-                    callback(err)
-                }
-            })
+            });
     }
 
     disconnect = function() {

@@ -1,53 +1,38 @@
 import BuzzerController from "./Controller";
 import * as simulator from "../../simulator";
+import { BluetoothConnectionHandler } from "../BluetoothConnectionHandler";
 
-
-class Buzzer{
-    Controller: any;
+class Buzzer {
+    Controller: BuzzerController;
     assignedName: pxsim.SimulatorMessage;
-    static instances = new Map();
-    constructor(id: pxsim.SimulatorMessage){
+    private bluetoothHandler: BluetoothConnectionHandler;
+    static instances = new Map<string, Buzzer>();
+
+    constructor(id: pxsim.SimulatorMessage) {
         this.assignedName = id;
         this.Controller = new BuzzerController('#00FF00');
-        Buzzer.instances.set(id, this);
-        window.addEventListener("message", ev => {
-            if (ev.data.type === `${this.assignedName} hydrate`) {
-                if(this.Controller._isConnected){
-                    simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothIsConnected`} );
-                }
-            }
-            if (ev.data.type === `${this.assignedName} connect`) {
-                this.Controller.connect(()=>{});
-            }
-            if (ev.data.type === `${this.assignedName} disconnect`) {
-                this.Controller.disconnect();
-            }
-            if (ev.data.type === `setBuzzerVolume for ${this.assignedName}`) {
-                this.Controller.setVolume(ev.data.value);
-            }
-            if (ev.data.type === `setBuzzerPitch for ${this.assignedName}`) {
-                this.Controller.setPitch(ev.data.value);
-            }
-            if (ev.data.type === `clearBuzzer for ${this.assignedName}`) {
-                this.Controller.clear();
-            }
-            if (ev.data.type === `setBuzzerColor for ${this.assignedName}`) {
-                this.Controller.setColor(ev.data.value);
-            }
-        }, false);
+        this.bluetoothHandler = new BluetoothConnectionHandler(this.Controller, this.assignedName);
+        Buzzer.instances.set(String(id), this);
 
-        this.Controller.on('connected',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothConnected`} );
-        })
-        this.Controller.on('bluetoothError',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothConnectionErr`} );
-        })
-        this.Controller.on('disconnected',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothDisconnected`} );
-        })
-
+        this.bluetoothHandler.registerMessageHandler(
+            `setBuzzerVolume for ${this.assignedName}`,
+            (value: number) => this.Controller.setVolume(value)
+        );
+        this.bluetoothHandler.registerMessageHandler(
+            `setBuzzerPitch for ${this.assignedName}`,
+            (value: number) => this.Controller.setPitch(value)
+        );
+        this.bluetoothHandler.registerMessageHandler(
+            `clearBuzzer for ${this.assignedName}`,
+            () => this.Controller.clear()
+        );
+        this.bluetoothHandler.registerMessageHandler(
+            `setBuzzerColor for ${this.assignedName}`,
+            (value: string) => this.Controller.setColor(value)
+        );
     }
-    static hasInstanceWithId(id: string ) {
+
+    static hasInstanceWithId(id: string): boolean {
         return Buzzer.instances.has(id);
     }
 }
