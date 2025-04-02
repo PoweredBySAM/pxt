@@ -17,6 +17,7 @@ jobs:
       - name: Configure npm
         run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          echo "unsafe-perm=true" >> ~/.npmrc
       - name: npm install
         run: |
           sudo apt-get install xvfb
