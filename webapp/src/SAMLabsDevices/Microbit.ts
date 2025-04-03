@@ -1,102 +1,122 @@
 import Controller from "../../../react-common/components/SAMLabsCommon/MicrobitController/Controller";
 import * as simulator from "../simulator";
-
+import { BluetoothConnectionHandler } from "./BluetoothConnectionHandler";
+import BaseController from "../../../react-common/components/SAMLabsCommon/BaseController";
 
 interface LEDValues {
     x: number;
     y: number;
 }
 
-class Microbit {
-    Controller: any;
-    assignedName: pxsim.SimulatorMessage;
-    static instances = new Map();
-    constructor(id:pxsim.SimulatorMessage){
-        this.assignedName = id;
-        this.Controller = new Controller();
-        Microbit.instances.set(id, this);
-        window.addEventListener("message", ev => {
-            if (ev.data.type === `${this.assignedName} hydrate`) {
-                if(this.Controller._connected){
-                    simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothIsConnected`} );
-                }
-            }
-            if (ev.data.type === `${this.assignedName} connect`) {
-                this.Controller.connect();
-            }
-            if (ev.data.type === `${this.assignedName} disconnect`) {
-                this.Controller.disconnect();
-            }
-            if (ev.data.type === `${this.assignedName} ledDisplayWord`) {
-                this.Controller.displayText(ev.data.value);
-            }
-            if (ev.data.type === `${this.assignedName} ledDisplayShape`) {
-                this.Controller.displayPattern(ev.data.value);
-            }
-            if (ev.data.type === `${this.assignedName} plot`) {
-                this.Controller.plot(ev.data.value.x, ev.data.value.y);
-            }
-            if (ev.data.type === `${this.assignedName} unplot`) {
-                this.Controller.unplot(ev.data.value.x, ev.data.value.y);
-            }
-            if (ev.data.type === `${this.assignedName} toggle`) {
-                this.Controller.toggle(ev.data.value.x, ev.data.value.y);
-            }
-            if (ev.data.type === `${this.assignedName} clearLED`) {
-                this.Controller.clearLED();
-            }
+interface ControllerWithEvents extends Controller {
+    on(event: string, listener: (...args: any[]) => void): void;
+}
 
-        }, false);
-        this.Controller.on('connected',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothConnected`} );
-        })
-        this.Controller.on('bluetoothError',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothConnectionErr`} );
-        })
-        this.Controller.on('disconnected',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothDisconnected`} );
-        })
+class Microbit {
+    Controller: ControllerWithEvents;
+    assignedName: pxsim.SimulatorMessage;
+    private bluetoothHandler: BluetoothConnectionHandler;
+    static instances = new Map();
+
+    constructor(id: pxsim.SimulatorMessage) {
+        this.assignedName = id;
+        this.Controller = new Controller() as ControllerWithEvents;
+        this.bluetoothHandler = new BluetoothConnectionHandler(this.Controller as unknown as BaseController, this.assignedName);
+        Microbit.instances.set(id, this);
+        this.setupMessageHandlers();
+        this.setupEventListeners();
+    }
+
+    private setupMessageHandlers(): void {
+        this.bluetoothHandler.registerMessageHandler(
+            `${this.assignedName} ledDisplayWord`,
+            (value) => this.Controller.displayText(value as string)
+        );
+
+        this.bluetoothHandler.registerMessageHandler(
+            `${this.assignedName} ledDisplayShape`,
+            (value) => this.Controller.displayPattern(value as string)
+        );
+
+        this.bluetoothHandler.registerMessageHandler(
+            `${this.assignedName} plot`,
+            (value) => {
+                const ledValue = value as LEDValues;
+                this.Controller.plot(ledValue.x, ledValue.y);
+            }
+        );
+
+        this.bluetoothHandler.registerMessageHandler(
+            `${this.assignedName} unplot`,
+            (value) => {
+                const ledValue = value as LEDValues;
+                this.Controller.unplot(ledValue.x, ledValue.y);
+            }
+        );
+
+        this.bluetoothHandler.registerMessageHandler(
+            `${this.assignedName} toggle`,
+            (value) => {
+                const ledValue = value as LEDValues;
+                this.Controller.toggle(ledValue.x, ledValue.y);
+            }
+        );
+
+        this.bluetoothHandler.registerMessageHandler(
+            `${this.assignedName} clearLED`,
+            () => this.Controller.clearLED()
+        );
+    }
+
+    private setupEventListeners(): void {
         this.Controller.on("APressed", this.onAButtonDown);
         this.Controller.on("AReleased", this.onAButtonUp);
         this.Controller.on("BPressed", this.onBButtonDown);
         this.Controller.on("BReleased", this.onBButtonUp);
-        this.Controller.on(
-            "temperatureChanged",
-            this.onTemperatureChanged
-        );
-        this.Controller.on(
-            "accelerometerChanged",
-            this.onAccelerometerChanged
-        );
+        this.Controller.on("temperatureChanged", this.onTemperatureChanged);
+        this.Controller.on("accelerometerChanged", this.onAccelerometerChanged);
     }
-    static hasInstanceWithId(id:any) {
+
+    static hasInstanceWithId(id: any) {
         return Microbit.instances.has(id);
     }
-    onAButtonDown = () => {
-        simulator.driver.samMessageToTarget({ type:`${this.assignedName} AButtonDown`} );
+
+    private onAButtonDown = () => {
+        simulator.driver.samMessageToTarget({ type: `${this.assignedName} AButtonDown` });
     }
-    onAButtonUp = () => {
-        simulator.driver.samMessageToTarget({ type: `${this.assignedName} AButtonUp`} );
+
+    private onAButtonUp = () => {
+        simulator.driver.samMessageToTarget({ type: `${this.assignedName} AButtonUp` });
     }
-    onBButtonDown = () => {
-        simulator.driver.samMessageToTarget({ type: `${this.assignedName} BButtonDown` } );
+
+    private onBButtonDown = () => {
+        simulator.driver.samMessageToTarget({ type: `${this.assignedName} BButtonDown` });
     }
-    onBButtonUp = () => {
-        simulator.driver.samMessageToTarget({ type: `${this.assignedName} BButtonUp` } );
+
+    private onBButtonUp = () => {
+        simulator.driver.samMessageToTarget({ type: `${this.assignedName} BButtonUp` });
     }
-    onTemperatureChanged = () => {
-        simulator.driver.samMessageToTarget({ type: `${this.assignedName} temperatureChanged`,value:{
+
+    private onTemperatureChanged = () => {
+        simulator.driver.samMessageToTarget({
+            type: `${this.assignedName} temperatureChanged`,
+            value: {
                 temperature: this.Controller._temperature,
                 isTemperatureChanged: this.Controller._isTemperatureChanged
-            } } );
+            }
+        });
     }
-    onAccelerometerChanged = () => {
-        simulator.driver.samMessageToTarget({ type: `${this.assignedName} accelerometerChanged` ,value:{
+
+    private onAccelerometerChanged = () => {
+        simulator.driver.samMessageToTarget({
+            type: `${this.assignedName} accelerometerChanged`,
+            value: {
                 x: this.Controller._xAccel,
                 y: this.Controller._yAccel,
                 z: this.Controller._zAccel
-            }} );
+            }
+        });
     }
 }
 
-export default  Microbit;
+export default Microbit;

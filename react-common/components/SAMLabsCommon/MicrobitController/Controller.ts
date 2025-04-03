@@ -26,7 +26,7 @@ class Pin {
 }
 
 class Controller extends eventEmitter {
-    _connected;
+    _isConnected;
     _xAccel;
     _yAccel;
     _zAccel;
@@ -37,7 +37,7 @@ class Controller extends eventEmitter {
     _namePrefix
     constructor() {
         super();
-        this._connected = false;
+        this._isConnected = false;
         this._device = null;
         this._namePrefix = "BBC";
         this._characteristics = {
@@ -114,7 +114,7 @@ class Controller extends eventEmitter {
     };
 
     connect = (callback = () => {}) => {
-        if (this._connected) return callback();
+        if (this._isConnected) return callback();
 
         navigator.bluetooth
             .requestDevice({
@@ -297,7 +297,7 @@ class Controller extends eventEmitter {
                 if (this._services.ioPinService) {
                     this.resetPins(true);
                 }
-                this._connected = true;
+                this._isConnected = true;
                 this._connecting = false;
                 this._device.addEventListener(
                     "gattserverdisconnected",
@@ -307,7 +307,7 @@ class Controller extends eventEmitter {
                 callback();
             })
             .catch((err) => {
-                this.emit("bluetoothError");
+                this.emit("bluetoothCancelled");
                 if (err.code === 8) {
                     callback();
                 } else {
@@ -330,7 +330,7 @@ class Controller extends eventEmitter {
             this._device = null;
         }
         this.resetPins(false);
-        this._connected = false;
+        this._isConnected = false;
         this._connecting = false;
         this._services = {};
         this._characteristics = {};
