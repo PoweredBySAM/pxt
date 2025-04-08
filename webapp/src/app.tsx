@@ -91,6 +91,17 @@ import ProximitySensor from "./SAMLabsDevices/ProximitySensor";
 import LED from "./SAMLabsDevices/LED";
 import  Cookies  from 'universal-cookie';
 import {validate} from '@samlabs/tokenutility/lib';
+import { setupCordovaLite} from './Cordova';
+
+
+declare global {
+    interface Window {
+        // appManager: AppManager;
+        startBluetoothScan: () => void;
+        stopBluetoothScan: () => void;
+        getUserInputHexValue: (userHexValue?: string) => void;
+    }
+}
 ///// SAMLABS End imports
 
 
@@ -5097,16 +5108,16 @@ export class ProjectView
         ///////////////////////////////////////////////////////////
         ////////////          SAMLABS render          /////////////
         ///////////////////////////////////////////////////////////
-        if(!window.location.href.includes('localhost')){
-            const accessToken = cookies.get('ACCESS_TOKEN');
-            if ( !accessToken) {
-                return NoTokenView();
-            }
-            const validationResults = validate(accessToken.teacherCode);
-            if (!validationResults.isValid) {
-                return NoTokenView();
-            }
-        }
+        // if(!window.location.href.includes('localhost')){
+        //     const accessToken = cookies.get('ACCESS_TOKEN');
+        //     if ( !accessToken) {
+        //         return NoTokenView();
+        //     }
+        //     const validationResults = validate(accessToken.teacherCode);
+        //     if (!validationResults.isValid) {
+        //         return NoTokenView();
+        //     }
+        // }
         ///////////////////////////////////////////////////////////
         ////////////          End SAMLABS render      /////////////
         ///////////////////////////////////////////////////////////
@@ -5189,6 +5200,13 @@ function NoTokenView (){
                 </div>
            </div>
 }
+const isCordova = !!(window as any).cordova;
+
+if (isCordova) {
+    setupCordovaLite();
+}
+
+/////SAMLABS No Token view and cordova import
 function render() {
     ReactDOM.render(<ProjectView />, sui.appElement);
 }

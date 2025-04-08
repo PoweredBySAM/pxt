@@ -18,32 +18,32 @@ export class BluetoothConnectionHandler {
 
     private setupEventListeners(): void {
         this.controller.on('connected', () => {
-            simulator.driver.samMessageToTarget({ 
+            simulator.driver.samMessageToTarget({
                 type: `${this.assignedName} bluetoothConnected`,
-                value: this.controller._deviceHexId 
+                value: this.controller._deviceHexId
             });
         });
 
         this.controller.on('bluetoothError', () => {
-            simulator.driver.samMessageToTarget({ 
-                type: `${this.assignedName} bluetoothConnectionErr` 
+            simulator.driver.samMessageToTarget({
+                type: `${this.assignedName} bluetoothConnectionErr`
             });
         });
 
         this.controller.on('bluetoothCancelled', () => {
-            simulator.driver.samMessageToTarget({ 
-                type: `${this.assignedName} bluetoothCancelled` 
+            simulator.driver.samMessageToTarget({
+                type: `${this.assignedName} bluetoothCancelled`
             });
         });
 
         this.controller.on('disconnected', () => {
-            simulator.driver.samMessageToTarget({ 
-                type: `${this.assignedName} bluetoothDisconnected` 
+            simulator.driver.samMessageToTarget({
+                type: `${this.assignedName} bluetoothDisconnected`
             });
         });
 
         this.controller.on('hexValueError', (invalidHex: string) => {
-            simulator.driver.samMessageToTarget({ 
+            simulator.driver.samMessageToTarget({
                 type: `${this.assignedName} hexValueError`,
                 value: invalidHex
             });
@@ -56,13 +56,12 @@ export class BluetoothConnectionHandler {
                 this.handleHydrate();
             }
             if (ev.data.type === `${this.assignedName} connect`) {
-                console.log("connect", ev.data.value);
                 this.handleConnect(ev.data.value as string | undefined);
             }
             if (ev.data.type === `${this.assignedName} disconnect`) {
                 this.handleDisconnect();
             }
-            
+
             const handler = this.customMessageHandlers.get(ev.data.type);
             if (handler) {
                 handler(ev.data.value);
@@ -72,9 +71,9 @@ export class BluetoothConnectionHandler {
 
     public handleHydrate(): void {
         if (this.controller._isConnected) {
-            simulator.driver.samMessageToTarget({ 
+            simulator.driver.samMessageToTarget({
                 type: `${this.assignedName} bluetoothIsConnected`,
-                value: this.controller._deviceHexId 
+                value: this.controller._deviceHexId
             });
         }
     }
@@ -90,4 +89,4 @@ export class BluetoothConnectionHandler {
     public registerMessageHandler(messageType: string, handler: MessageHandler): void {
         this.customMessageHandlers.set(messageType, handler);
     }
-} 
+}
