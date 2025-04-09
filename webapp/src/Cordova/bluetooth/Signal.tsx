@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { observer } from 'mobx-react';
 
 const green = '#0dc8bd';
 const yellow = '#f4c464';
@@ -10,7 +9,7 @@ interface SignalProps {
     signal: number;
 }
 
-const Signal = observer(({ signal }: SignalProps) => {
+const Signal: React.FC<SignalProps> = ({ signal }) => {
     let Fill1 = empty;
     let Fill2 = empty;
     let Fill3 = empty;
@@ -65,6 +64,6 @@ const Signal = observer(({ signal }: SignalProps) => {
             />
         </svg>
     );
-});
+};
 
 export default Signal; 

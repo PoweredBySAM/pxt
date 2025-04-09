@@ -766,17 +766,17 @@ export class ProjectsCarousel extends data.Component<ProjectsCarouselProps, Proj
                 {showNewProject && <div role="button" className="ui card link buttoncard newprojectcard" title={lf("Creates a new empty project")}
                     onClick={() => {
                              // --- SAMLABS ANALYTICS CODE --
-                        // if(!window.location.href.includes('localhost')){
-                        //     const obj = cookies.get('ACCESS_TOKEN');
-                        //     const userId = obj.samScriptEncryptedUserId;
-                        //     if (userId) {
-                        //         rudderanalytics.identify(userId);
-                        //         rudderanalytics.track("Create Project", {
-                        //             Type: 'SAM Script',
-                        //             Module: 'Projects',
-                        //         });
-                        //     }
-                        // }
+                        if(!window.location.href.includes('localhost')){
+                            const obj = cookies.get('ACCESS_TOKEN');
+                            const userId = obj.samScriptEncryptedUserId;
+                            if (userId) {
+                                rudderanalytics.identify(userId);
+                                rudderanalytics.track("Create Project", {
+                                    Type: 'SAM Script',
+                                    Module: 'Projects',
+                                });
+                            }
+                        }
                             this.newProject(isFirstProject)
                         // --- SAMLABS ANALYTICS CODE ---
                         }

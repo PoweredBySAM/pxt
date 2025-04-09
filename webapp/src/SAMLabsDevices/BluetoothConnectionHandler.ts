@@ -7,6 +7,7 @@ export class BluetoothConnectionHandler {
     private controller: BaseController;
     private assignedName: pxsim.SimulatorMessage;
     private customMessageHandlers: Map<string, MessageHandler>;
+    private isCordova: boolean = !!(window as any).cordova;
 
     constructor(controller: BaseController, assignedName: pxsim.SimulatorMessage) {
         this.controller = controller;
@@ -20,7 +21,7 @@ export class BluetoothConnectionHandler {
         this.controller.on('connected', () => {
             simulator.driver.samMessageToTarget({
                 type: `${this.assignedName} bluetoothConnected`,
-                value: this.controller._deviceHexId
+                value: this.isCordova ? this.controller.cordovaHex : this.controller._deviceHexId,
             });
         });
 
@@ -70,10 +71,16 @@ export class BluetoothConnectionHandler {
     }
 
     public handleHydrate(): void {
+        if (this.isCordova) {
+            simulator.driver.samMessageToTarget({
+                type: `itsCordovaEnvironment`,
+
+            });
+        }
         if (this.controller._isConnected) {
             simulator.driver.samMessageToTarget({
                 type: `${this.assignedName} bluetoothIsConnected`,
-                value: this.controller._deviceHexId
+                value: this.isCordova ? this.controller.cordovaHex : this.controller._deviceHexId
             });
         }
     }

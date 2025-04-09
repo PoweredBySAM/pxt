@@ -5108,16 +5108,16 @@ export class ProjectView
         ///////////////////////////////////////////////////////////
         ////////////          SAMLABS render          /////////////
         ///////////////////////////////////////////////////////////
-        // if(!window.location.href.includes('localhost')){
-        //     const accessToken = cookies.get('ACCESS_TOKEN');
-        //     if ( !accessToken) {
-        //         return NoTokenView();
-        //     }
-        //     const validationResults = validate(accessToken.teacherCode);
-        //     if (!validationResults.isValid) {
-        //         return NoTokenView();
-        //     }
-        // }
+        if(!window.location.href.includes('localhost')){
+            const accessToken = cookies.get('ACCESS_TOKEN');
+            if ( !accessToken) {
+                return NoTokenView();
+            }
+            const validationResults = validate(accessToken.teacherCode);
+            if (!validationResults.isValid) {
+                return NoTokenView();
+            }
+        }
         ///////////////////////////////////////////////////////////
         ////////////          End SAMLABS render      /////////////
         ///////////////////////////////////////////////////////////

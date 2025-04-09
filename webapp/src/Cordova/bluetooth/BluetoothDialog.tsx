@@ -1,119 +1,147 @@
 import * as React from 'react';
-import * as sui from '../../sui';
 import { BluetoothDevice } from './Bluetooth';
-import { observer } from 'mobx-react';
 import Signal from './Signal';
+import * as simulator from "../../simulator";
+import * as core from "../../core";
+import IconPairing from './IconPairing';
 
 interface BluetoothDialogProps {
     getDiscoveredDevices: () => BluetoothDevice[];
-    onDeviceSelected: (device: BluetoothDevice) => void;
+    onDeviceSelected: (device: BluetoothDevice | null) => void;
 }
 
-const BluetoothDialogContent = observer((props: BluetoothDialogProps) => {
+const BluetoothDialogContent: React.FC<BluetoothDialogProps> = (props) => {
     const { getDiscoveredDevices, onDeviceSelected } = props;
-    const devices = getDiscoveredDevices();
+    const [devices, setDevices] = React.useState<BluetoothDevice[]>([]);
+
+    React.useEffect(() => {
+        const updateDevices = () => {
+            const currentDevices = getDiscoveredDevices().filter(
+                (device) => device.receivingAdvertisements
+            );
+            setDevices(currentDevices);
+        };
+        updateDevices();
+
+        // Set up interval for updates
+        const intervalId = setInterval(updateDevices, 100);
+
+        return () => clearInterval(intervalId);
+    }, [getDiscoveredDevices]);
 
     const styles = {
         bluetoothDialog: {
-            minWidth: '400px',
-            padding: '1rem'
+            width: '100%',
+            backgroundColor: '#ffffff'
         },
-        list: {
-            margin: 0
+        header: {
+            padding: '16px 20px',
+            borderBottom: '1px solid #e0e0e0',
+            fontSize: '24px',
+            fontWeight: 600 as const,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+        },
+        closeButton: {
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+            color: '#666666',
+            fontSize: '30px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        },
+        deviceList: {
+            padding: '8px 0'
         },
         device: {
             display: 'flex',
             alignItems: 'center',
-            padding: '1rem',
-            borderBottom: '1px solid rgba(34, 36, 38, 0.1)'
+            justifyContent: 'space-between',
+            padding: '12px 20px',
+            borderBottom: '1px solid #f5f5f5'
         },
-        lastDevice: {
-            borderBottom: 'none'
+        deviceName: {
+            color: '#000000',
+            fontSize: '14px'
         },
-        hexCode: {
+        deviceId: {
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem',
-            color: '#9b9b9c',
-            fontWeight: 700,
+            gap: '6px',
+            color: '#666666',
             fontSize: '16px'
         },
-        signalStrength: {
-            marginTop: '0.5rem',
-            color: '#9b9b9c',
+        rightContent: {
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '12px'
         },
-        button: {
-            margin: 0
+        connectButton: {
+            backgroundColor: '#4fd1c5',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '6px 12px',
+            fontSize: '14px',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap'
         },
-        content: {
-            flex: 1
-        },
-        rightContent: {
-            marginLeft: '1rem'
-        },
-        infoMessage: {
-            backgroundColor: '#cce5ff',
-            borderColor: '#b8daff',
-            color: '#004085',
-            padding: '1rem',
-            borderRadius: '0.25rem',
-            marginBottom: '1rem'
-        },
-        messageHeader: {
-            fontWeight: 'bold',
-            marginBottom: '0.5rem'
-        },
-        messageText: {
-            margin: 0
+        noDevices: {
+            padding: '20px',
+            textAlign: 'center' as const,
+            color: '#666666'
         }
     };
 
     return (
         <div style={styles.bluetoothDialog}>
+            <div style={styles.header}>
+                <span>Bluetooth</span>
+                <button
+                    style={styles.closeButton}
+                    onClick={() => {
+                        core.hideDialog();
+                        simulator.driver.samMessageToTarget({
+                            type: `cordovaModalClosed`
+                        });
+                    }}
+                    aria-label="Close dialog"
+                >
+                    ✕
+                </button>
+            </div>
             {devices.length > 0 ? (
-                <div className="ui divided relaxed list" style={styles.list}>
-                    {devices.map((device, index) => (
-                        <div 
-                            key={device.id} 
-                            className="bluetooth-device ui item"
-                            style={{
-                                ...styles.device,
-                                ...(index === devices.length - 1 ? styles.lastDevice : {})
-                            }}
-                        >
-                            <div style={styles.content}>
-                                <div style={styles.hexCode}>
-                                    <sui.Icon icon="bluetooth" />
-                                    {device.deviceHex}
-                                </div>
-                                <div style={styles.signalStrength}>
-                                    <Signal signal={device.rssi} />
-                                    {device.rssi} dBm
-                                </div>
-                            </div>
-                            <div style={styles.rightContent}>
-                                <sui.Button
-                                    className="primary"
-                                    text={lf("Select")}
-                                    onClick={() => onDeviceSelected(device)}
-                                />
-                            </div>
+                <div style={styles.deviceList}>
+                    {devices.map((device) => (
+                        <div key={device.id} style={styles.device}>
+                            <div style={styles.deviceName}>{device.name}</div>
+                            {device.name !== 'BBC micro:bit [zetug]' && <div style={styles.deviceId}>
+                                <IconPairing />
+                                {device.deviceHex}
+                            </div>}
+                            <Signal signal={device.rssi} />
+                            <button
+                                style={styles.connectButton}
+                                onClick={() => onDeviceSelected(device)}
+                            >
+                                Connect
+                            </button>
                         </div>
                     ))}
                 </div>
             ) : (
-                <div style={styles.infoMessage}>
-                    <div style={styles.messageHeader}>No devices found</div>
-                    <p style={styles.messageText}>Make sure your Bluetooth device is turned on and in range.</p>
+                <div style={styles.noDevices}>
+                    No Bluetooth devices found
                 </div>
             )}
         </div>
     );
-});
+};
 
 export function getBluetoothDialog(props: BluetoothDialogProps): React.ReactElement {
     return <BluetoothDialogContent {...props} />;
-} 
+}
