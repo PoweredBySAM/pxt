@@ -91,6 +91,17 @@ import ProximitySensor from "./SAMLabsDevices/ProximitySensor";
 import LED from "./SAMLabsDevices/LED";
 import  Cookies  from 'universal-cookie';
 import {validate} from '@samlabs/tokenutility/lib';
+import { setupCordovaLite} from './Cordova';
+
+
+declare global {
+    interface Window {
+        // appManager: AppManager;
+        startBluetoothScan: () => void;
+        stopBluetoothScan: () => void;
+        getUserInputHexValue: (userHexValue?: string) => void;
+    }
+}
 ///// SAMLABS End imports
 
 
@@ -5189,6 +5200,13 @@ function NoTokenView (){
                 </div>
            </div>
 }
+const isCordova = !!(window as any).cordova;
+
+if (isCordova) {
+    setupCordovaLite();
+}
+
+/////SAMLABS No Token view and cordova import
 function render() {
     ReactDOM.render(<ProjectView />, sui.appElement);
 }
