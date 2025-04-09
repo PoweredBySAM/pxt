@@ -1,47 +1,33 @@
-import TemperatureController from "./controller";
+import TemperatureSensorController from "./controller";
 import * as simulator from "../../simulator";
+import { BluetoothConnectionHandler } from "../BluetoothConnectionHandler";
 
-
-class TemperatureSensor{
-    Controller: any;
+class TemperatureSensor {
+    Controller: TemperatureSensorController;
     assignedName: pxsim.SimulatorMessage;
-    static instances = new Map();
-    constructor(id: pxsim.SimulatorMessage){
+    private bluetoothHandler: BluetoothConnectionHandler;
+    static instances = new Map<string, TemperatureSensor>();
+
+    constructor(id: pxsim.SimulatorMessage) {
         this.assignedName = id;
-        this.Controller = new TemperatureController('#00FF00');
-        TemperatureSensor.instances.set(id, this);
-        window.addEventListener("message", ev => {
-            if (ev.data.type === `${this.assignedName} hydrate`) {
-                if(this.Controller._isConnected){
-                    simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothIsConnected`} );
-                }
-            }
-            if (ev.data.type === `${this.assignedName} connect`) {
-                this.Controller.connect(()=>{});
-            }
-            if (ev.data.type === `${this.assignedName} disconnect`) {
-                this.Controller.disconnect();
-            }
-            if (ev.data.type === `setHeatSensorColor for ${this.assignedName}`) {
-                this.Controller.setColor(ev.data.value);
-            }
-        }, false);
+        this.Controller = new TemperatureSensorController('#00FF00');
+        this.bluetoothHandler = new BluetoothConnectionHandler(this.Controller, this.assignedName);
+        TemperatureSensor.instances.set(String(id), this);
 
-        this.Controller.on('connected',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothConnected`} );
-        })
-        this.Controller.on('bluetoothError',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothConnectionErr`} );
-        })
-        this.Controller.on('disconnected',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothDisconnected`} );
-        })
-        this.Controller.on('valueChanged',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} valueChanged`, value:this.Controller._value} );
-        })
+        this.bluetoothHandler.registerMessageHandler(
+            `setTemperatureSensorColor for ${this.assignedName}`,
+            (value: string) => this.Controller.setColor(value)
+        );
 
+        this.Controller.on('valueChanged', () => {
+            simulator.driver.samMessageToTarget({ 
+                type: `${this.assignedName} valueChanged`, 
+                value: this.Controller.getCelsiusValue()
+            });
+        });
     }
-    static hasInstanceWithId(id: string ) {
+
+    static hasInstanceWithId(id: string): boolean {
         return TemperatureSensor.instances.has(id);
     }
 }

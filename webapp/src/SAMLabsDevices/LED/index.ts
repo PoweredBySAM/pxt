@@ -1,56 +1,45 @@
 import * as simulator from "../../simulator";
 import LEDController from "./Controller";
+import { BluetoothConnectionHandler } from "../BluetoothConnectionHandler";
 
-
-class LED{
-    Controller: any;
+class LED {
+    Controller: LEDController;
     assignedName: pxsim.SimulatorMessage;
-    static instances = new Map();
-    constructor(id: pxsim.SimulatorMessage){
+    private bluetoothHandler: BluetoothConnectionHandler;
+    static instances = new Map<string, LED>();
+
+    constructor(id: pxsim.SimulatorMessage) {
         this.assignedName = id;
         this.Controller = new LEDController('#00FF00');
-        LED.instances.set(id, this);
-        window.addEventListener("message", ev => {
-            if (ev.data.type === `${this.assignedName} hydrate`) {
-                if(this.Controller._isConnected){
-                    simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothIsConnected`} );
-                }
-            }
-            if (ev.data.type === `${this.assignedName} connect`) {
-                this.Controller.connect(()=>{});
-            }
-            if (ev.data.type === `${this.assignedName} disconnect`) {
-                this.Controller.disconnect();
-            }
-            if (ev.data.type === `setLEDColor for ${this.assignedName}`) {
-                this.Controller.setLEDColor(ev.data.value);
-            }
-            if (ev.data.type === `setLEDDeviceBodyColor for ${this.assignedName}`) {
-                this.Controller.setColor(ev.data.value);
-            }
-            if (ev.data.type === `setLEDBrightness for ${this.assignedName}`) {
-                this.Controller.setLEDBrightness(ev.data.value);
-            }
-            if (ev.data.type === `turnLEDOff for ${this.assignedName}`) {
-                this.Controller.turnLEDOff();
-            }
-        }, false);
+        this.bluetoothHandler = new BluetoothConnectionHandler(this.Controller, this.assignedName);
+        LED.instances.set(String(id), this);
 
-        this.Controller.on('connected',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothConnected`} );
-        })
-        this.Controller.on('bluetoothError',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothConnectionErr`} );
-        })
-        this.Controller.on('disconnected',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} bluetoothDisconnected`} );
-        })
-        this.Controller.on('valueChanged',()=>{
-            simulator.driver.samMessageToTarget({ type: `${this.assignedName} valueChanged`, value:this.Controller._value} );
-        })
+        this.bluetoothHandler.registerMessageHandler(
+            `setLEDColor for ${this.assignedName}`,
+            (value: string) => this.Controller.setLEDColor(value)
+        );
+        this.bluetoothHandler.registerMessageHandler(
+            `setLEDDeviceBodyColor for ${this.assignedName}`,
+            (value: string) => this.Controller.setColor(value)
+        );
+        this.bluetoothHandler.registerMessageHandler(
+            `setLEDBrightness for ${this.assignedName}`,
+            (value: number) => this.Controller.setLEDBrightness(value)
+        );
+        this.bluetoothHandler.registerMessageHandler(
+            `turnLEDOff for ${this.assignedName}`,
+            () => this.Controller.turnLEDOff()
+        );
 
+        this.Controller.on('valueChanged', () => {
+            simulator.driver.samMessageToTarget({ 
+                type: `${this.assignedName} valueChanged`, 
+                value: this.Controller.getLEDColor()
+            });
+        });
     }
-    static hasInstanceWithId(id: string ) {
+
+    static hasInstanceWithId(id: string): boolean {
         return LED.instances.has(id);
     }
 }
