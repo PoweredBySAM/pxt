@@ -17,6 +17,7 @@ class BaseController extends EventEmitter {
     _getDefaultDeviceColor;
     _isConnected;
     _deviceHexId;
+    cordovaHex;
 
     constructor(defaultDeviceColor, namePrefix) {
         super()
